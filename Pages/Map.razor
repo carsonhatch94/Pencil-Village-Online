@@ -1,0 +1,96 @@
+﻿@page "/map"
+@inject GridStateService GridState
+@using PencilVillageOnline.Services
+
+<PageTitle>Map</PageTitle>
+
+<h3>Map</h3>
+
+<div class="mb-3">
+    <button class="btn btn-secondary" @onclick="ClearGrid">Clear Grid</button>
+    <span class="ms-3">Active squares: @activeSquares.Count</span>
+</div>
+
+<div class="pixel-grid">
+    @for (int row = 0; row < GridHeight; row++)
+    {
+        @for (int col = 0; col < GridWidth; col++)
+        {
+            int localRow = row;
+            int localCol = col;
+            <div class="@GetSquareClass(localRow, localCol)"
+                 data-row="@localRow"
+                 data-col="@localCol"
+                 @onclick="() => OnSquareClick(localRow, localCol)">
+            </div>
+        }
+    }
+</div>
+
+<style>
+    .pixel-grid {
+        display: grid;
+        grid-template-columns: repeat(57, 25px);
+        grid-template-rows: repeat(41, 25px);
+        gap: 0;
+        width: fit-content;
+        border: 1px solid #ccc;
+        margin: 20px 0;
+    }
+
+    .pixel-square {
+        width: 25px;
+        height: 25px;
+        background-color: #f0f0f0;
+        border: 1px solid black;
+        cursor: pointer;
+        transition: background-color 0.1s ease;
+    }
+
+        .pixel-square:hover {
+            background-color: #ddd;
+        }
+
+        .pixel-square.active {
+            background-color: #ffcccb;
+        }
+</style>
+
+@code {
+    private const int GridWidth = 57;
+    private const int GridHeight = 41;
+    private HashSet<(int row, int col)> activeSquares = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        activeSquares = await GridState.LoadGridStateAsync();
+    }
+
+    private async Task OnSquareClick(int row, int col)
+    {
+        var position = (row, col);
+        if (activeSquares.Contains(position))
+        {
+            activeSquares.Remove(position);
+        }
+        else
+        {
+            activeSquares.Add(position);
+        }
+
+        await GridState.SaveGridStateAsync(activeSquares);
+        StateHasChanged();
+    }
+
+    private async Task ClearGrid()
+    {
+        activeSquares.Clear();
+        await GridState.ClearGridStateAsync();
+        StateHasChanged();
+    }
+
+    private string GetSquareClass(int row, int col)
+    {
+        return activeSquares.Contains((row, col)) ? "pixel-square active" : "pixel-square";
+    }
+}
