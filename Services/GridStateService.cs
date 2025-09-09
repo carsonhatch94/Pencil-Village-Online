@@ -107,11 +107,11 @@ public class GridStateService
         var terrainTypes = new[] { TerrainType.Woods, TerrainType.Rocky, TerrainType.Field, TerrainType.Scrub, TerrainType.Crag };
         var columnRanges = new[]
         {
-            (start: 0, end: 10),   // Woods: 11 columns
-            (start: 11, end: 22),  // Rocky: 12 columns  
-            (start: 23, end: 34),  // Field: 12 columns
-            (start: 35, end: 46),  // Scrub: 12 columns
-            (start: 47, end: 56)   // Crag: 10 columns
+            (start: 0, end: 10), 
+            (start: 11, end: 22),
+            (start: 23, end: 34),
+            (start: 35, end: 46),
+            (start: 47, end: 56)
         };
 
         for (int row = 0; row < 41; row++)
