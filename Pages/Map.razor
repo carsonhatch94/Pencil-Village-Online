@@ -8,11 +8,12 @@
 <h3>Map</h3>
 
 <div class="mb-3">
-    <button class="btn btn-secondary" @onclick="ClearGrid">Clear Grid</button>
+    <button class="btn btn-danger" @onclick="ResetTerrain">Reset Terrain</button>
     <button class="btn btn-primary ms-2" @onclick="ToggleEditMode">
-        @(isEditMode ? "Exit Edit" : "Edit Mode")
+        @(isEditMode ? "Exit Edit" : "Edit Buildings")
     </button>
-    <span class="ms-3">Squares: @squares.Count</span>
+    <span class="ms-3">Total squares: @(GridWidth* GridHeight)</span>
+    <span class="ms-3">Squares with buildings: @squares.Values.Count(s => s.Building != BuildingState.None)</span>
 </div>
 
 @if (isEditMode && selectedSquare != null)
@@ -21,13 +22,8 @@
         <h5>Editing Square (@selectedSquare.Row, @selectedSquare.Col)</h5>
         <div class="row">
             <div class="col-md-6">
-                <label class="form-label">Terrain Type:</label>
-                <select class="form-select" @bind="selectedSquare.Terrain">
-                    @foreach (TerrainType terrain in Enum.GetValues<TerrainType>())
-                    {
-                        <option value="@terrain">@terrain</option>
-                    }
-                </select>
+                <label class="form-label">Terrain Type (Read-only):</label>
+                <input class="form-control" value="@selectedSquare.Terrain" readonly />
             </div>
             <div class="col-md-6">
                 <label class="form-label">Building State:</label>
@@ -42,6 +38,14 @@
         <button class="btn btn-success mt-2" @onclick="SaveSquareChanges">Save Changes</button>
     </div>
 }
+
+<div class="terrain-legend mb-3">
+    <span class="legend-item"><span class="legend-color terrain-woods"></span> Woods (Cols 0-10)</span>
+    <span class="legend-item"><span class="legend-color terrain-rocky"></span> Rocky (Cols 11-22)</span>
+    <span class="legend-item"><span class="legend-color terrain-field"></span> Field (Cols 23-34)</span>
+    <span class="legend-item"><span class="legend-color terrain-scrub"></span> Scrub (Cols 35-46)</span>
+    <span class="legend-item"><span class="legend-color terrain-crag"></span> Crag (Cols 47-56)</span>
+</div>
 
 <div class="pixel-grid">
     @for (int row = 0; row < GridHeight; row++)
@@ -74,44 +78,40 @@
     .pixel-square {
         width: 25px;
         height: 25px;
-        background-color: #f0f0f0;
         border: 1px solid black;
         cursor: pointer;
-        transition: background-color 0.1s ease;
+        transition: all 0.1s ease;
     }
 
         .pixel-square:hover {
-            background-color: #ddd;
-        }
-
-        .pixel-square.has-content {
-            background-color: #e6f3ff;
+            border-width: 2px;
+            border-color: #333;
         }
 
         .pixel-square.selected {
-            background-color: #ffeb3b;
-            border: 2px solid #ff9800;
+            border: 3px solid #ff9800;
+            box-shadow: 0 0 5px rgba(255, 152, 0, 0.7);
         }
 
         /* Terrain type colors */
-        .pixel-square.terrain-woods {
+        .pixel-square.terrain-woods, .legend-color.terrain-woods {
             background-color: #006400; /* Dark Green */
         }
 
-        .pixel-square.terrain-rocky {
-            background-color: #808080; /* Grey */
+        .pixel-square.terrain-rocky, .legend-color.terrain-rocky {
+            background-color: #d3d3d3; /* Light Grey */
         }
 
-        .pixel-square.terrain-field {
+        .pixel-square.terrain-field, .legend-color.terrain-field {
             background-color: #ffffe0; /* Light Yellow */
         }
 
-        .pixel-square.terrain-scrub {
+        .pixel-square.terrain-scrub, .legend-color.terrain-scrub {
             background-color: #deb887; /* Light Brown */
         }
 
-        .pixel-square.terrain-crag {
-            background-color: #000000; /* Black */
+        .pixel-square.terrain-crag, .legend-color.terrain-crag {
+            background-color: #404040; /* Dark Grey */
         }
 
         /* Building state indicators */
@@ -122,6 +122,29 @@
         .pixel-square.building-rubble {
             border: 3px solid #f44336;
         }
+
+    .terrain-legend {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        padding: 10px;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 14px;
+    }
+
+    .legend-color {
+        width: 20px;
+        height: 20px;
+        border: 1px solid black;
+        display: inline-block;
+    }
 </style>
 
 @code {
@@ -142,29 +165,14 @@
 
         if (isEditMode)
         {
-            // In edit mode, select the square for editing
-            if (!squares.ContainsKey(position))
-            {
-                squares[position] = new Square(row, col);
-            }
-            selectedSquare = squares[position];
-            StateHasChanged();
-        }
-        else
-        {
-            // In normal mode, toggle square existence
+            // In edit mode, select the square for editing buildings only
             if (squares.ContainsKey(position))
             {
-                squares.Remove(position);
+                selectedSquare = squares[position];
+                StateHasChanged();
             }
-            else
-            {
-                squares[position] = new Square(row, col);
-            }
-
-            await GridState.SaveGridStateAsync(squares);
-            StateHasChanged();
         }
+        // No action in normal mode since terrain is fixed
     }
 
     private async Task SaveSquareChanges()
@@ -183,11 +191,11 @@
         StateHasChanged();
     }
 
-    private async Task ClearGrid()
+    private async Task ResetTerrain()
     {
-        squares.Clear();
-        selectedSquare = null;
         await GridState.ClearGridStateAsync();
+        squares = await GridState.LoadGridStateAsync();
+        selectedSquare = null;
         StateHasChanged();
     }
 
@@ -199,7 +207,6 @@
         if (squares.ContainsKey(position))
         {
             var square = squares[position];
-            classes.Add("has-content");
             classes.Add($"terrain-{square.Terrain.ToString().ToLower()}");
 
             if (square.Building != BuildingState.None)
@@ -224,6 +231,6 @@
             var square = squares[position];
             return $"{square.Terrain} terrain, {square.Building}";
         }
-        return $"Empty square ({row}, {col})";
+        return $"({row}, {col})";
     }
 }
