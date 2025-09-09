@@ -1,6 +1,7 @@
 ﻿@page "/map"
 @inject GridStateService GridState
 @using PencilVillageOnline.Services
+@using PencilVillageOnline.Models
 
 <PageTitle>Map</PageTitle>
 
@@ -8,8 +9,39 @@
 
 <div class="mb-3">
     <button class="btn btn-secondary" @onclick="ClearGrid">Clear Grid</button>
-    <span class="ms-3">Active squares: @activeSquares.Count</span>
+    <button class="btn btn-primary ms-2" @onclick="ToggleEditMode">
+        @(isEditMode ? "Exit Edit" : "Edit Mode")
+    </button>
+    <span class="ms-3">Squares: @squares.Count</span>
 </div>
+
+@if (isEditMode && selectedSquare != null)
+{
+    <div class="mb-3 p-3 border rounded">
+        <h5>Editing Square (@selectedSquare.Row, @selectedSquare.Col)</h5>
+        <div class="row">
+            <div class="col-md-6">
+                <label class="form-label">Terrain Type:</label>
+                <select class="form-select" @bind="selectedSquare.Terrain">
+                    @foreach (TerrainType terrain in Enum.GetValues<TerrainType>())
+                    {
+                        <option value="@terrain">@terrain</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Building State:</label>
+                <select class="form-select" @bind="selectedSquare.Building">
+                    @foreach (BuildingState building in Enum.GetValues<BuildingState>())
+                    {
+                        <option value="@building">@building</option>
+                    }
+                </select>
+            </div>
+        </div>
+        <button class="btn btn-success mt-2" @onclick="SaveSquareChanges">Save Changes</button>
+    </div>
+}
 
 <div class="pixel-grid">
     @for (int row = 0; row < GridHeight; row++)
@@ -21,6 +53,7 @@
             <div class="@GetSquareClass(localRow, localCol)"
                  data-row="@localRow"
                  data-col="@localCol"
+                 title="@GetSquareTooltip(localRow, localCol)"
                  @onclick="() => OnSquareClick(localRow, localCol)">
             </div>
         }
@@ -51,46 +84,146 @@
             background-color: #ddd;
         }
 
-        .pixel-square.active {
-            background-color: #ffcccb;
+        .pixel-square.has-content {
+            background-color: #e6f3ff;
+        }
+
+        .pixel-square.selected {
+            background-color: #ffeb3b;
+            border: 2px solid #ff9800;
+        }
+
+        /* Terrain type colors */
+        .pixel-square.terrain-woods {
+            background-color: #006400; /* Dark Green */
+        }
+
+        .pixel-square.terrain-rocky {
+            background-color: #808080; /* Grey */
+        }
+
+        .pixel-square.terrain-field {
+            background-color: #ffffe0; /* Light Yellow */
+        }
+
+        .pixel-square.terrain-scrub {
+            background-color: #deb887; /* Light Brown */
+        }
+
+        .pixel-square.terrain-crag {
+            background-color: #000000; /* Black */
+        }
+
+        /* Building state indicators */
+        .pixel-square.building-partofbuilding {
+            border: 3px solid #2196f3;
+        }
+
+        .pixel-square.building-rubble {
+            border: 3px solid #f44336;
         }
 </style>
 
 @code {
     private const int GridWidth = 57;
     private const int GridHeight = 41;
-    private HashSet<(int row, int col)> activeSquares = new();
+    private Dictionary<(int row, int col), Square> squares = new();
+    private bool isEditMode = false;
+    private Square? selectedSquare = null;
 
     protected override async Task OnInitializedAsync()
     {
-        activeSquares = await GridState.LoadGridStateAsync();
+        squares = await GridState.LoadGridStateAsync();
     }
 
     private async Task OnSquareClick(int row, int col)
     {
         var position = (row, col);
-        if (activeSquares.Contains(position))
+
+        if (isEditMode)
         {
-            activeSquares.Remove(position);
+            // In edit mode, select the square for editing
+            if (!squares.ContainsKey(position))
+            {
+                squares[position] = new Square(row, col);
+            }
+            selectedSquare = squares[position];
+            StateHasChanged();
         }
         else
         {
-            activeSquares.Add(position);
-        }
+            // In normal mode, toggle square existence
+            if (squares.ContainsKey(position))
+            {
+                squares.Remove(position);
+            }
+            else
+            {
+                squares[position] = new Square(row, col);
+            }
 
-        await GridState.SaveGridStateAsync(activeSquares);
+            await GridState.SaveGridStateAsync(squares);
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveSquareChanges()
+    {
+        if (selectedSquare != null)
+        {
+            await GridState.SaveGridStateAsync(squares);
+            StateHasChanged();
+        }
+    }
+
+    private void ToggleEditMode()
+    {
+        isEditMode = !isEditMode;
+        selectedSquare = null;
         StateHasChanged();
     }
 
     private async Task ClearGrid()
     {
-        activeSquares.Clear();
+        squares.Clear();
+        selectedSquare = null;
         await GridState.ClearGridStateAsync();
         StateHasChanged();
     }
 
     private string GetSquareClass(int row, int col)
     {
-        return activeSquares.Contains((row, col)) ? "pixel-square active" : "pixel-square";
+        var classes = new List<string> { "pixel-square" };
+        var position = (row, col);
+
+        if (squares.ContainsKey(position))
+        {
+            var square = squares[position];
+            classes.Add("has-content");
+            classes.Add($"terrain-{square.Terrain.ToString().ToLower()}");
+
+            if (square.Building != BuildingState.None)
+            {
+                classes.Add($"building-{square.Building.ToString().ToLower()}");
+            }
+        }
+
+        if (selectedSquare != null && selectedSquare.Row == row && selectedSquare.Col == col)
+        {
+            classes.Add("selected");
+        }
+
+        return string.Join(" ", classes);
+    }
+
+    private string GetSquareTooltip(int row, int col)
+    {
+        var position = (row, col);
+        if (squares.ContainsKey(position))
+        {
+            var square = squares[position];
+            return $"{square.Terrain} terrain, {square.Building}";
+        }
+        return $"Empty square ({row}, {col})";
     }
 }
