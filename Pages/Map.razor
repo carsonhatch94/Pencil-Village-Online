@@ -19,7 +19,7 @@
 @if (isEditMode && selectedSquare != null)
 {
     <div class="mb-3 p-3 border rounded">
-        <h5>Editing Square (@selectedSquare.Row, @selectedSquare.Col)</h5>
+        <h5>Editing Square (X: @(selectedSquare.Col + 1), Y: @(selectedSquare.Row + 1))</h5>
         <div class="row">
             <div class="col-md-6">
                 <label class="form-label">Terrain Type (Read-only):</label>
@@ -40,11 +40,11 @@
 }
 
 <div class="terrain-legend mb-3">
-    <span class="legend-item"><span class="legend-color terrain-woods"></span> Woods (Cols 0-10)</span>
-    <span class="legend-item"><span class="legend-color terrain-rocky"></span> Rocky (Cols 11-22)</span>
-    <span class="legend-item"><span class="legend-color terrain-field"></span> Field (Cols 23-34)</span>
-    <span class="legend-item"><span class="legend-color terrain-scrub"></span> Scrub (Cols 35-46)</span>
-    <span class="legend-item"><span class="legend-color terrain-crag"></span> Crag (Cols 47-56)</span>
+    <span class="legend-item"><span class="legend-color terrain-woods"></span> Woods (Cols 1-11)</span>
+    <span class="legend-item"><span class="legend-color terrain-rocky"></span> Rocky (Cols 12-23)</span>
+    <span class="legend-item"><span class="legend-color terrain-field"></span> Field (Cols 24-35)</span>
+    <span class="legend-item"><span class="legend-color terrain-scrub"></span> Scrub (Cols 36-47)</span>
+    <span class="legend-item"><span class="legend-color terrain-crag"></span> Crag (Cols 48-57)</span>
 </div>
 
 <div class="pixel-grid">
@@ -229,8 +229,8 @@
         if (squares.ContainsKey(position))
         {
             var square = squares[position];
-            return $"{square.Terrain} terrain, {square.Building}";
+            return $"{square.Terrain} terrain, {square.Building} (X: {col + 1}, Y: {row + 1})";
         }
-        return $"({row}, {col})";
+        return $"(X: {col + 1}, Y: {row + 1})";
     }
 }
