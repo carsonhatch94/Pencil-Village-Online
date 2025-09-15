@@ -1,11 +1,62 @@
 ﻿@page "/map"
 @inject GridStateService GridState
+@inject ResourceService ResourceService
 @using PencilVillageOnline.Services
 @using PencilVillageOnline.Models
+@implements IDisposable
 
 <PageTitle>Map</PageTitle>
 
 <h3>Map</h3>
+
+<!-- Resource Management Area -->
+<div class="resource-panel mb-4 p-3 border rounded bg-light">
+    <h5>Resources</h5>
+    <div class="row">
+        <div class="col-md-3">
+            <div class="resource-item">
+                <label class="form-label">Wood: @ResourceService.CurrentResources.GetWood() / @ResourceService.CurrentResources.GetMaxStorage()</label>
+                <div class="btn-group w-100" role="group">
+                    <button class="btn btn-outline-danger btn-sm" @onclick="() => RemoveWood(1)" disabled="@(ResourceService.CurrentResources.GetWood() <= 0)">-</button>
+                    <button class="btn btn-outline-success btn-sm" @onclick="() => AddWood(1)" disabled="@(ResourceService.CurrentResources.GetWood() >= ResourceService.CurrentResources.GetMaxStorage())">+</button>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="resource-item">
+                <label class="form-label">Stone: @ResourceService.CurrentResources.GetStone() / @ResourceService.CurrentResources.GetMaxStorage()</label>
+                <div class="btn-group w-100" role="group">
+                    <button class="btn btn-outline-danger btn-sm" @onclick="() => RemoveStone(1)" disabled="@(ResourceService.CurrentResources.GetStone() <= 0)">-</button>
+                    <button class="btn btn-outline-success btn-sm" @onclick="() => AddStone(1)" disabled="@(ResourceService.CurrentResources.GetStone() >= ResourceService.CurrentResources.GetMaxStorage())">+</button>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="resource-item">
+                <label class="form-label">Gold: @ResourceService.CurrentResources.GetGold() / @ResourceService.CurrentResources.GetMaxStorage()</label>
+                <div class="btn-group w-100" role="group">
+                    <button class="btn btn-outline-danger btn-sm" @onclick="() => RemoveGold(1)" disabled="@(ResourceService.CurrentResources.GetGold() <= 0)">-</button>
+                    <button class="btn btn-outline-success btn-sm" @onclick="() => AddGold(1)" disabled="@(ResourceService.CurrentResources.GetGold() >= ResourceService.CurrentResources.GetMaxStorage())">+</button>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="resource-item">
+                <label class="form-label">Depots: @ResourceService.CurrentResources.GetDepotCount() / 4</label>
+                <div class="btn-group w-100" role="group">
+                    <button class="btn btn-outline-danger btn-sm" @onclick="RemoveDepot" disabled="@(ResourceService.CurrentResources.GetDepotCount() <= 0)">-</button>
+                    <button class="btn btn-outline-success btn-sm" @onclick="AddDepot" disabled="@(ResourceService.CurrentResources.GetDepotCount() >= 4)">+</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="mt-2">
+        <small class="text-muted">
+            Base storage: 4 | Each Depot adds +2 storage (Max 4 Depots) |
+            Current Max Storage: @ResourceService.CurrentResources.GetMaxStorage()
+        </small>
+    </div>
+</div>
 
 <div class="mb-3">
     <button class="btn btn-danger" @onclick="ResetTerrain">Reset Terrain</button>
@@ -65,6 +116,21 @@
 </div>
 
 <style>
+    .resource-panel {
+        background-color: #f8f9fa;
+        border: 2px solid #dee2e6;
+    }
+
+    .resource-item {
+        margin-bottom: 10px;
+    }
+
+        .resource-item .form-label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            display: block;
+        }
+
     .pixel-grid {
         display: grid;
         grid-template-columns: repeat(57, 25px);
@@ -157,6 +223,58 @@
     protected override async Task OnInitializedAsync()
     {
         squares = await GridState.LoadGridStateAsync();
+        await ResourceService.LoadResourcesAsync();
+
+        // Subscribe to resource changes for UI updates
+        ResourceService.OnResourcesChanged += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        // Unsubscribe from events to prevent memory leaks
+        ResourceService.OnResourcesChanged -= StateHasChanged;
+    }
+
+    // Depot management methods
+    private async Task AddDepot()
+    {
+        await ResourceService.TryAddDepotAsync();
+    }
+
+    private async Task RemoveDepot()
+    {
+        await ResourceService.TryRemoveDepotAsync();
+    }
+
+    // Resource management methods
+    private async Task AddWood(int amount)
+    {
+        await ResourceService.TryAddWoodAsync(amount);
+    }
+
+    private async Task RemoveWood(int amount)
+    {
+        await ResourceService.TrySpendResourcesAsync(amount, 0, 0);
+    }
+
+    private async Task AddStone(int amount)
+    {
+        await ResourceService.TryAddStoneAsync(amount);
+    }
+
+    private async Task RemoveStone(int amount)
+    {
+        await ResourceService.TrySpendResourcesAsync(0, amount, 0);
+    }
+
+    private async Task AddGold(int amount)
+    {
+        await ResourceService.TryAddGoldAsync(amount);
+    }
+
+    private async Task RemoveGold(int amount)
+    {
+        await ResourceService.TrySpendResourcesAsync(0, 0, amount);
     }
 
     private async Task OnSquareClick(int row, int col)
@@ -180,6 +298,8 @@
         if (selectedSquare != null)
         {
             await GridState.SaveGridStateAsync(squares);
+            // Update resource storage when buildings change (in case depots were added/removed)
+            await ResourceService.UpdateMaxStorageFromDepotsAsync();
             StateHasChanged();
         }
     }
