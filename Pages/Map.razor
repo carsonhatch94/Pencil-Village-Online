@@ -1,6 +1,7 @@
 ﻿@page "/map"
 @inject GridStateService GridState
 @inject ResourceService ResourceService
+@using PencilVillageOnline.Components
 @using PencilVillageOnline.Services
 @using PencilVillageOnline.Models
 @implements IDisposable
@@ -10,53 +11,7 @@
 <h3>Map</h3>
 
 <!-- Resource Management Area -->
-<div class="resource-panel mb-4 p-3 border rounded bg-light">
-    <h5>Resources</h5>
-    <div class="row">
-        <div class="col-md-3">
-            <div class="resource-item">
-                <label class="form-label">Wood: @ResourceService.CurrentResources.GetWood() / @ResourceService.CurrentResources.GetMaxStorage()</label>
-                <div class="btn-group w-100" role="group">
-                    <button class="btn btn-outline-danger btn-sm" @onclick="() => RemoveWood(1)" disabled="@(ResourceService.CurrentResources.GetWood() <= 0)">-</button>
-                    <button class="btn btn-outline-success btn-sm" @onclick="() => AddWood(1)" disabled="@(ResourceService.CurrentResources.GetWood() >= ResourceService.CurrentResources.GetMaxStorage())">+</button>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="resource-item">
-                <label class="form-label">Stone: @ResourceService.CurrentResources.GetStone() / @ResourceService.CurrentResources.GetMaxStorage()</label>
-                <div class="btn-group w-100" role="group">
-                    <button class="btn btn-outline-danger btn-sm" @onclick="() => RemoveStone(1)" disabled="@(ResourceService.CurrentResources.GetStone() <= 0)">-</button>
-                    <button class="btn btn-outline-success btn-sm" @onclick="() => AddStone(1)" disabled="@(ResourceService.CurrentResources.GetStone() >= ResourceService.CurrentResources.GetMaxStorage())">+</button>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="resource-item">
-                <label class="form-label">Gold: @ResourceService.CurrentResources.GetGold() / @ResourceService.CurrentResources.GetMaxStorage()</label>
-                <div class="btn-group w-100" role="group">
-                    <button class="btn btn-outline-danger btn-sm" @onclick="() => RemoveGold(1)" disabled="@(ResourceService.CurrentResources.GetGold() <= 0)">-</button>
-                    <button class="btn btn-outline-success btn-sm" @onclick="() => AddGold(1)" disabled="@(ResourceService.CurrentResources.GetGold() >= ResourceService.CurrentResources.GetMaxStorage())">+</button>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="resource-item">
-                <label class="form-label">Depots: @ResourceService.CurrentResources.GetDepotCount() / 4</label>
-                <div class="btn-group w-100" role="group">
-                    <button class="btn btn-outline-danger btn-sm" @onclick="RemoveDepot" disabled="@(ResourceService.CurrentResources.GetDepotCount() <= 0)">-</button>
-                    <button class="btn btn-outline-success btn-sm" @onclick="AddDepot" disabled="@(ResourceService.CurrentResources.GetDepotCount() >= 4)">+</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="mt-2">
-        <small class="text-muted">
-            Base storage: 4 | Each Depot adds +2 storage (Max 4 Depots) |
-            Current Max Storage: @ResourceService.CurrentResources.GetMaxStorage()
-        </small>
-    </div>
-</div>
+<ResourcePanel />
 
 <div class="mb-3">
     <button class="btn btn-danger" @onclick="ResetTerrain">Reset Terrain</button>

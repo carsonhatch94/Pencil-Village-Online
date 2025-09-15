@@ -1,0 +1,79 @@
+﻿@using PencilVillageOnline.Services
+@using PencilVillageOnline.Models
+@inject ResourceService ResourceService
+@implements IDisposable
+
+<div class="resource-panel mb-3 p-3 border rounded bg-light">
+    <h5>Resources</h5>
+    <div class="row g-2">
+        <div class="col-auto">
+            <div class="resource-item">
+                <label class="form-label">Wood: @ResourceService.CurrentResources.GetWood() / @ResourceService.CurrentResources.GetMaxStorage()</label>
+                <div class="btn-group" role="group">
+                    <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveWood(1)" disabled="@(ResourceService.CurrentResources.GetWood() <= 0)">-</button>
+                    <button class="btn btn-sm btn-outline-success" @onclick="() => AddWood(1)" disabled="@(ResourceService.CurrentResources.GetWood() >= ResourceService.CurrentResources.GetMaxStorage())">+</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-auto">
+            <div class="resource-item">
+                <label class="form-label">Stone: @ResourceService.CurrentResources.GetStone() / @ResourceService.CurrentResources.GetMaxStorage()</label>
+                <div class="btn-group" role="group">
+                    <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveStone(1)" disabled="@(ResourceService.CurrentResources.GetStone() <= 0)">-</button>
+                    <button class="btn btn-sm btn-outline-success" @onclick="() => AddStone(1)" disabled="@(ResourceService.CurrentResources.GetStone() >= ResourceService.CurrentResources.GetMaxStorage())">+</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-auto">
+            <div class="resource-item">
+                <label class="form-label">Gold: @ResourceService.CurrentResources.GetGold() / @ResourceService.CurrentResources.GetMaxStorage()</label>
+                <div class="btn-group" role="group">
+                    <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveGold(1)" disabled="@(ResourceService.CurrentResources.GetGold() <= 0)">-</button>
+                    <button class="btn btn-sm btn-outline-success" @onclick="() => AddGold(1)" disabled="@(ResourceService.CurrentResources.GetGold() >= ResourceService.CurrentResources.GetMaxStorage())">+</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-auto">
+            <div class="resource-item">
+                <label class="form-label">Depots: @ResourceService.CurrentResources.GetDepotCount() / 4</label>
+                <div class="btn-group" role="group">
+                    <button class="btn btn-sm btn-outline-danger" @onclick="RemoveDepot" disabled="@(ResourceService.CurrentResources.GetDepotCount() <= 0)">-</button>
+                    <button class="btn btn-sm btn-outline-success" @onclick="AddDepot" disabled="@(ResourceService.CurrentResources.GetDepotCount() >= 4)">+</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-2">
+        <small class="text-muted">Base storage: 4. Each Depot adds +2 storage (max 4 Depots).</small>
+    </div>
+</div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        // Safe to load here; Map.razor may also load resources — LoadResourcesAsync is idempotent
+        await ResourceService.LoadResourcesAsync();
+        ResourceService.OnResourcesChanged += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        ResourceService.OnResourcesChanged -= StateHasChanged;
+    }
+
+    private async Task AddWood(int amount) => await ResourceService.TryAddWoodAsync(amount);
+    private async Task RemoveWood(int amount) => await ResourceService.TrySpendResourcesAsync(amount, 0, 0);
+
+    private async Task AddStone(int amount) => await ResourceService.TryAddStoneAsync(amount);
+    private async Task RemoveStone(int amount) => await ResourceService.TrySpendResourcesAsync(0, amount, 0);
+
+    private async Task AddGold(int amount) => await ResourceService.TryAddGoldAsync(amount);
+    private async Task RemoveGold(int amount) => await ResourceService.TrySpendResourcesAsync(0, 0, amount);
+
+    private async Task AddDepot() => await ResourceService.TryAddDepotAsync();
+    private async Task RemoveDepot() => await ResourceService.TryRemoveDepotAsync();
+}
